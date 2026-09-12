@@ -1,6 +1,6 @@
 # Laravel Model Metadata
 
-[![Tests](https://img.shields.io/github/actions/workflow/status/MartinMulder/laravel-model-metadata/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/MartinMulder/laravel-model-metadata/actions)
+[![Tests](https://img.shields.io/github/actions/workflow/status/MartinMulder/laravel-model-metadata/tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/MartinMulder/laravel-model-metadata/actions)
 
 Attach flexible, typed, polymorphic metadata to any Eloquent model — with class-based casting,
 strict validation, N+1 prevention out of the box, and an optional Filament v5 integration.
