@@ -1,5 +1,7 @@
 # Laravel Model Metadata
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/martinmulder/laravel-model-metadata.svg?style=flat-square)](https://packagist.org/packages/martinmulder/laravel-model-metadata)
+[![Total Downloads](https://img.shields.io/packagist/dt/martinmulder/laravel-model-metadata.svg?style=flat-square)](https://packagist.org/packages/martinmulder/laravel-model-metadata)
 [![Tests](https://img.shields.io/github/actions/workflow/status/MartinMulder/laravel-model-metadata/tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/MartinMulder/laravel-model-metadata/actions)
 
 Attach flexible, typed, polymorphic metadata to any Eloquent model — with class-based casting,
@@ -24,21 +26,7 @@ groups of the same model can each have their own set of required fields and opti
 
 ## Installation
 
-This package is not (yet) published on Packagist. Install it directly from its GitHub repository
-by adding it as a VCS repository in your application's `composer.json`:
-
-```json
-{
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "git@github.com:MartinMulder/laravel-model-metadata.git"
-        }
-    ]
-}
-```
-
-Then require it:
+You can install the package via composer:
 
 ```bash
 composer require martinmulder/laravel-model-metadata
