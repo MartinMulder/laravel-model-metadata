@@ -8,6 +8,7 @@ use MartinMulder\LaravelModelMetadata\Attributes\RequiresMetadata;
 use MartinMulder\LaravelModelMetadata\Exceptions\RequiredMetadataKeyException;
 use MartinMulder\LaravelModelMetadata\Models\Metadata;
 use MartinMulder\LaravelModelMetadata\Models\MetadataSchema;
+use MartinMulder\LaravelModelMetadata\Scopes\MetadataScopeRegistry;
 use ReflectionAttribute;
 use ReflectionClass;
 
@@ -62,7 +63,9 @@ trait HasMetadata
      */
     public function metadataScope(): ?string
     {
-        return null;
+        // A package or host may define the scope through the registry (MetadataScope::resolveUsing());
+        // a model overriding this method keeps full control.
+        return app(MetadataScopeRegistry::class)->for(static::class)?->resolve($this);
     }
 
     /**

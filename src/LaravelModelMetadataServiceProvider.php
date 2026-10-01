@@ -3,6 +3,7 @@
 namespace MartinMulder\LaravelModelMetadata;
 
 use Illuminate\Support\ServiceProvider;
+use MartinMulder\LaravelModelMetadata\Scopes\MetadataScopeRegistry;
 
 class LaravelModelMetadataServiceProvider extends ServiceProvider
 {
@@ -20,6 +21,18 @@ class LaravelModelMetadataServiceProvider extends ServiceProvider
         // Register the TypeRegistry singleton
         $this->app->singleton(TypeRegistry::class, function ($app) {
             return new TypeRegistry($app['config']->get('laravel-model-metadata.types', []));
+        });
+
+        // Scope definitions: packages register theirs in their own service provider
+        // (MetadataScopes::register()); the host can add some through the config.
+        $this->app->singleton(MetadataScopeRegistry::class, function ($app) {
+            $registry = new MetadataScopeRegistry;
+
+            foreach ($app['config']->get('laravel-model-metadata.scopes', []) as $definition) {
+                $registry->register(is_string($definition) ? $app->call([$app->make($definition), '__invoke']) : $definition);
+            }
+
+            return $registry;
         });
     }
 

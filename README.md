@@ -65,6 +65,9 @@ That's the basics — see **[USAGE.md](USAGE.md)** for the full guide, including
 - Declaring required metadata keys, defaults, and allowed options with `#[RequiresMetadata]`.
 - Scope-aware metadata schemas (`metadata_schemas` + `metadataScope()`) for models where
   different groups of instances need different required fields/options.
+- Registering scopes from a package (`MetadataScopes::register(MetadataScope::for(...)->scopedBy(...))`),
+  so the admin UI offers owners and scope values as choices, plus a *Metadata fields* relation
+  manager for the source model (e.g. the fields per document type).
 - The bundled `MetadataRelationManager` and `MetadataSchemaResource` for FilamentPHP v5.
 
 ---

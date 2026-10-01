@@ -494,3 +494,87 @@ register `MetadataRelationManager` on a specific resource's `getRelations()`. It
 `owner_type`, `scope`, `key`, `type`, `default`, `options` and `required` per row, so a new scope
 (e.g. a new Normenkader) can get its own metadata fields without a developer writing a migration.
 
+
+When owners are registered (see [section 9](#9-registering-scopes-from-a-package-or-module)), the
+form offers them as choices: **Owner model** is a list of the registered owners (by label) plus the
+owner types already used in schema rows, and **Scope** becomes a list of that owner's scope values
+(e.g. the document types) with "— all (global) —" for a scope-less row. For any other model, tick
+*Model not in the list* and type the class name and scope as before. The table shows the labels
+too ("Document", "Document type: Policy").
+
+---
+
+## 9. Registering Scopes From a Package or Module
+
+`metadataScope()` on the model works, but it leaves two things unknown to the rest of the app:
+*what* a scope value means, and *which* values exist. A package that ships its own models (e.g.
+`Document` and `DocumentType`) can describe that once, in its service provider, so administrators
+pick scopes from a list instead of typing class names and ids.
+
+### Defining the scope of an owner model
+
+```php
+use MartinMulder\LaravelModelMetadata\Scopes\MetadataScope;
+use MartinMulder\LaravelModelMetadata\Scopes\MetadataScopes;
+
+public function boot(): void
+{
+    MetadataScopes::register(
+        MetadataScope::for(Document::class)
+            ->label('Document')
+            // Scope values are DocumentType records, identified by their slug:
+            ->scopedBy(DocumentType::class, key: 'slug', title: 'name', label: 'Document type')
+            // How a document determines its scope:
+            ->resolveUsing(fn (Document $document): ?string => $document->type?->slug),
+    );
+}
+```
+
+- `resolveUsing()` replaces a `metadataScope()` override on the model (`HasMetadata::metadataScope()`
+  asks the registry). A model that still overrides `metadataScope()` keeps full control.
+- `scopedBy(Source::class, key:, title:, label:)` fills the scope options from the source model
+  (`key` = the stored scope value, `title` = the label) and makes the source model eligible for the
+  *Metadata fields* relation manager below. The key can be any column — a slug, or the id.
+- Without a source model, give the options yourself:
+  `->scopeLabel('Tenant')->options(fn () => ['acme' => 'ACME', 'globex' => 'Globex'])`.
+- The host app can register scopes too, without a service provider, through the config:
+  `'scopes' => [App\Metadata\ProjectScope::class]` — an invokable class returning a `MetadataScope`.
+
+Only one definition per owner model; registering again replaces it.
+
+### Managing the fields of a scope on the source model
+
+Give the source model the `ProvidesMetadataScope` trait and add the bundled relation manager to its
+Filament resource:
+
+```php
+use MartinMulder\LaravelModelMetadata\Scopes\ProvidesMetadataScope;
+
+class DocumentType extends Model
+{
+    use ProvidesMetadataScope;   // adds metadataSchemas(): HasMany<MetadataSchema>
+}
+```
+
+```php
+use MartinMulder\LaravelModelMetadata\Filament\RelationManagers\MetadataSchemasRelationManager;
+
+public static function getRelations(): array
+{
+    return [MetadataSchemasRelationManager::class];
+}
+```
+
+The *Metadata fields* tab on, say, the "Policy" document type lists and edits the schema rows with
+`owner_type = Document` and `scope = 'policy'`; new rows get both filled in automatically. Fields
+added there apply to new documents of that type (and to existing ones via
+`syncRequiredMetadata()`, see section 6). To change the texts, extend the class:
+
+```php
+class MetadataVeldenRelationManager extends MetadataSchemasRelationManager
+{
+    protected static ?string $title = 'Metadata-velden';
+}
+```
+
+In code, `$documentType->metadataSchemas()` reads and creates the same rows.

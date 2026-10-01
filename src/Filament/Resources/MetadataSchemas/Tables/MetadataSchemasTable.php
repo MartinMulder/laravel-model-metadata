@@ -10,7 +10,9 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use MartinMulder\LaravelModelMetadata\Filament\Resources\MetadataSchemas\Schemas\MetadataSchemaForm;
 use MartinMulder\LaravelModelMetadata\Models\MetadataSchema;
+use MartinMulder\LaravelModelMetadata\Scopes\MetadataScopeRegistry;
 
 class MetadataSchemasTable
 {
@@ -20,10 +22,19 @@ class MetadataSchemasTable
             ->columns([
                 TextColumn::make('owner_type')
                     ->label('Owner Model')
+                    ->formatStateUsing(fn (string $state): string => app(MetadataScopeRegistry::class)->for($state)?->getLabel() ?? $state)
+                    ->tooltip(fn (MetadataSchema $record): string => $record->owner_type)
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('scope')
+                    ->formatStateUsing(function (MetadataSchema $record, string $state): string {
+                        $definition = app(MetadataScopeRegistry::class)->for($record->owner_type);
+
+                        return $definition?->hasOptions()
+                            ? $definition->getScopeLabel() . ': ' . $definition->getOptionLabel($state)
+                            : $state;
+                    })
                     ->placeholder('— global —')
                     ->searchable()
                     ->sortable(),
@@ -54,10 +65,7 @@ class MetadataSchemasTable
             ->filters([
                 SelectFilter::make('owner_type')
                     ->label('Owner Model')
-                    ->options(fn () => MetadataSchema::query()
-                        ->distinct()
-                        ->pluck('owner_type', 'owner_type')
-                        ->toArray()),
+                    ->options(fn (): array => MetadataSchemaForm::ownerOptions()),
             ])
             ->recordActions([
                 EditAction::make(),
