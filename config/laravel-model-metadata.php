@@ -22,6 +22,7 @@ return [
         'boolean' => \MartinMulder\LaravelModelMetadata\Types\BooleanType::class,
         'json' => \MartinMulder\LaravelModelMetadata\Types\JsonType::class,
         'badges' => \MartinMulder\LaravelModelMetadata\Types\BadgesType::class,
+        'date' => \MartinMulder\LaravelModelMetadata\Types\DateType::class,
     ],
 
     /**

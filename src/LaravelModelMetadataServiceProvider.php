@@ -19,8 +19,13 @@ class LaravelModelMetadataServiceProvider extends ServiceProvider
         );
 
         // Register the TypeRegistry singleton
+        // Built-in types are always available, also when the host published an older config
+        // without them; a type in the config with the same name replaces the built-in one.
         $this->app->singleton(TypeRegistry::class, function ($app) {
-            return new TypeRegistry($app['config']->get('laravel-model-metadata.types', []));
+            return new TypeRegistry(array_merge(
+                TypeRegistry::BUILT_IN,
+                $app['config']->get('laravel-model-metadata.types', []),
+            ));
         });
 
         // Scope definitions: packages register theirs in their own service provider

@@ -98,7 +98,7 @@ class MetadataSchemaForm
                 ->required(),
 
             Textarea::make('default')
-                ->helperText('Raw default value. For "badges", a comma-separated list or JSON array is accepted; for "json", a valid JSON string.')
+                ->helperText('Raw default value. For "badges", a comma-separated list or JSON array is accepted; for "json", a valid JSON string; for "date", YYYY-MM-DD (or empty).')
                 ->columnSpanFull(),
 
             TagsInput::make('options')

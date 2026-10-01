@@ -107,12 +107,39 @@ foreach ($products as $product) {
 
 ## 4. Configuring & Registering Custom Types
 
-The default supported types are configured in `config/laravel-model-metadata.php`:
+The built-in types are:
 - `string`
 - `integer`
 - `boolean`
 - `json`
 - `badges`
+- `date`
+
+They are always available — also when your app published an older config file that does not list
+a newer built-in type. Types in `config/laravel-model-metadata.php` are added to them (a type with
+the same name replaces the built-in one).
+
+### The `date` Type
+
+A calendar date without a time. It is stored as `Y-m-d` and read back as a `CarbonImmutable` at the
+start of that day:
+
+```php
+$document->setMetadata('valid_from', '2026-03-01', 'date');   // also a Carbon/DateTime, or an ISO date-time
+$document->getMetadata('valid_from');                         // CarbonImmutable 2026-03-01 00:00:00
+$document->setMetadata('valid_until', null, 'date');          // no date
+```
+
+Only real dates are accepted (`2026-02-30`, `01-03-2026` or `tomorrow` are refused); a time or time
+zone in the input is dropped without shifting the day. Because the stored format is ISO, dates can
+be compared as strings in SQL:
+
+```php
+Document::whereHas('metadata', fn ($q) => $q->where('key', 'valid_from')->where('value', '<=', today()->toDateString()));
+```
+
+In a schema row the default is `YYYY-MM-DD` or empty (= no date). The `MetadataRelationManager` shows
+a date picker for this type and lists the value as a short, locale-aware date.
 
 ### The `badges` Type
 

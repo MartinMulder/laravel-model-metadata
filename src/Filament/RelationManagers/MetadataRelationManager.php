@@ -158,6 +158,18 @@ class MetadataRelationManager extends RelationManager
                         }
                     }),
 
+                // Conditional field for Date (stored as Y-m-d; the picker works with the same format)
+                Forms\Components\DatePicker::make('value_date')
+                    ->label('Value')
+                    ->native(false)
+                    ->displayFormat('Y-m-d')
+                    ->visible(fn (Get $get) => $get('type') === 'date')
+                    ->afterStateHydrated(function ($component, $record) {
+                        if ($record && $record->type === 'date') {
+                            $component->state($record->value?->format('Y-m-d'));
+                        }
+                    }),
+
                 // Conditional field for JSON
                 Forms\Components\Textarea::make('value_json')
                     ->label('Value')
@@ -186,10 +198,10 @@ class MetadataRelationManager extends RelationManager
                 // Default fallback for String and custom types
                 Forms\Components\TextInput::make('value_string')
                     ->label('Value')
-                    ->visible(fn (Get $get) => !in_array($get('type'), ['boolean', 'json', 'integer', 'badges'])
+                    ->visible(fn (Get $get) => !in_array($get('type'), ['boolean', 'json', 'integer', 'badges', 'date'])
                         && $this->getOptionsForKey($get('key')) === null)
                     ->afterStateHydrated(function ($component, $record) {
-                        if ($record && !in_array($record->type, ['boolean', 'json', 'integer', 'badges'])
+                        if ($record && !in_array($record->type, ['boolean', 'json', 'integer', 'badges', 'date'])
                             && $this->getOptionsForKey($record->key) === null) {
                             $component->state((string) $record->value);
                         }
@@ -218,6 +230,10 @@ class MetadataRelationManager extends RelationManager
                         }
                         if ($record->type === 'boolean') {
                             return $record->value ? 'true' : 'false';
+                        }
+                        if ($record->type === 'date') {
+                            // Locale-aware short date (en: 10/01/2026, nl: 01-10-2026).
+                            return $record->value?->locale(app()->getLocale())->isoFormat('L') ?? '';
                         }
                         if ($record->type === 'json' || is_array($record->value) || is_object($record->value)) {
                             return json_encode($record->value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -327,14 +343,14 @@ class MetadataRelationManager extends RelationManager
 
         if ($options !== null && in_array($type, ['string', 'integer', 'boolean'], true)) {
             $data['value'] = app(TypeRegistry::class)->get($type)->cast($data['value_select'] ?? null);
-            unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect']);
+            unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect'], $data['value_date']);
 
             return $data;
         }
 
         if ($options !== null && $type === 'badges') {
             $data['value'] = $data['value_multiselect'] ?? [];
-            unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect']);
+            unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect'], $data['value_date']);
 
             return $data;
         }
@@ -348,6 +364,9 @@ class MetadataRelationManager extends RelationManager
                 break;
             case 'badges':
                 $data['value'] = $data['value_badges'] ?? [];
+                break;
+            case 'date':
+                $data['value'] = filled($data['value_date'] ?? null) ? $data['value_date'] : null;
                 break;
             case 'json':
                 $json = $data['value_json'] ?? '';
@@ -368,7 +387,7 @@ class MetadataRelationManager extends RelationManager
         }
 
         // Clean up temporary fields so they are not saved as database columns
-        unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect']);
+        unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect'], $data['value_date']);
 
         return $data;
     }

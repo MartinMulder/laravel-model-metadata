@@ -60,7 +60,7 @@ $product->getMetadata('short_description'); // 'High quality premium product'
 ```
 
 That's the basics — see **[USAGE.md](USAGE.md)** for the full guide, including:
-- All built-in value types (`string`, `integer`, `boolean`, `json`, `badges`) and how to
+- All built-in value types (`string`, `integer`, `boolean`, `json`, `badges`, `date`) and how to
   register your own.
 - Declaring required metadata keys, defaults, and allowed options with `#[RequiresMetadata]`.
 - Scope-aware metadata schemas (`metadata_schemas` + `metadataScope()`) for models where

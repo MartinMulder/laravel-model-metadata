@@ -103,3 +103,20 @@ it('renders the edit page of the source record with the relation manager', funct
         ->assertOk()
         ->assertSeeLivewire(MetadataSchemasRelationManager::class);
 });
+
+it('enters a date value through the metadata relation manager', function () {
+    $item = Item::create(['name' => 'Plan', 'category_id' => $this->policy->id]);
+
+    $component = Livewire::test(MartinMulder\LaravelModelMetadata\Filament\RelationManagers\MetadataRelationManager::class, ['ownerRecord' => $item, 'pageClass' => EditCategory::class])
+        ->mountAction(TestAction::make('create')->table());
+
+    foreach (['key' => 'valid_from', 'type' => 'date', 'value_date' => '2026-03-01'] as $veld => $waarde) {
+        $component->set("mountedActions.0.data.{$veld}", $waarde);
+    }
+    $component->callMountedAction()->assertHasNoActionErrors();
+
+    expect($item->fresh()->getMetadata('valid_from')->toDateString())->toBe('2026-03-01');
+
+    Livewire::test(MartinMulder\LaravelModelMetadata\Filament\RelationManagers\MetadataRelationManager::class, ['ownerRecord' => $item->fresh(), 'pageClass' => EditCategory::class])
+        ->assertSee('03/01/2026'); // locale "en": isoFormat('L')
+});

@@ -8,6 +8,20 @@ use MartinMulder\LaravelModelMetadata\Contracts\MetadataType;
 class TypeRegistry
 {
     /**
+     * The types that ship with the package.
+     *
+     * @var array<string, class-string<MetadataType>>
+     */
+    public const BUILT_IN = [
+        'string' => Types\StringType::class,
+        'integer' => Types\IntegerType::class,
+        'boolean' => Types\BooleanType::class,
+        'json' => Types\JsonType::class,
+        'badges' => Types\BadgesType::class,
+        'date' => Types\DateType::class,
+    ];
+
+    /**
      * The registered types.
      *
      * @var array<string, string|MetadataType>
