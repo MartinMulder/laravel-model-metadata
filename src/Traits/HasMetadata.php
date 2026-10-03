@@ -100,6 +100,8 @@ trait HasMetadata
                     ->when($scope !== null, fn ($q) => $q->orWhere('scope', $scope));
             })
             ->orderByRaw('scope IS NULL DESC')
+            ->orderBy('sort_order')
+            ->orderBy('id')
             ->get()
             ->each(function (MetadataSchema $row) use (&$definitions) {
                 $definitions[$row->key] = $row->toDefinition();

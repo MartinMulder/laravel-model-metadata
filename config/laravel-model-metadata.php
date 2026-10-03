@@ -23,6 +23,7 @@ return [
         'json' => \MartinMulder\LaravelModelMetadata\Types\JsonType::class,
         'badges' => \MartinMulder\LaravelModelMetadata\Types\BadgesType::class,
         'date' => \MartinMulder\LaravelModelMetadata\Types\DateType::class,
+        'multiselect' => \MartinMulder\LaravelModelMetadata\Types\MultiselectType::class,
     ],
 
     /**

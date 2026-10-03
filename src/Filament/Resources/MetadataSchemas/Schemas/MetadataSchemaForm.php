@@ -11,6 +11,8 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use MartinMulder\LaravelModelMetadata\Models\MetadataSchema;
+use MartinMulder\LaravelModelMetadata\Options\MetadataOptionSource;
+use MartinMulder\LaravelModelMetadata\Options\MetadataOptionSourceRegistry;
 use MartinMulder\LaravelModelMetadata\Scopes\MetadataScopeRegistry;
 use MartinMulder\LaravelModelMetadata\TypeRegistry;
 
@@ -101,9 +103,19 @@ class MetadataSchemaForm
                 ->helperText('Raw default value. For "badges", a comma-separated list or JSON array is accepted; for "json", a valid JSON string; for "date", YYYY-MM-DD (or empty).')
                 ->columnSpanFull(),
 
+            Select::make('options_source')
+                ->label('Options from source')
+                ->options(fn (): array => static::optionSourceOptions())
+                ->placeholder('— fixed list below —')
+                ->helperText('Choices offered by a package or the host app (MetadataOptionSources::register()). The stored values are the keys, e.g. slugs.')
+                ->live()
+                ->visible(fn (Get $get): bool => static::optionSourceOptions() !== [] || filled($get('options_source')))
+                ->columnSpanFull(),
+
             TagsInput::make('options')
                 ->helperText('Allowed values for this key. Leave empty for unconstrained.')
-                ->dehydrateStateUsing(fn (?array $state): ?array => filled($state) ? $state : null)
+                ->dehydrateStateUsing(fn (?array $state, Get $get): ?array => filled($state) && blank($get('options_source')) ? $state : null)
+                ->visible(fn (Get $get): bool => blank($get('options_source')))
                 ->columnSpanFull(),
 
             Toggle::make('required')
@@ -131,6 +143,19 @@ class MetadataSchemaForm
         }
 
         return $options->sort()->all();
+    }
+
+    /**
+     * Registered option sources: [name => label].
+     *
+     * @return array<string, string>
+     */
+    public static function optionSourceOptions(): array
+    {
+        return collect(app(MetadataOptionSourceRegistry::class)->all())
+            ->map(fn (MetadataOptionSource $source): string => $source->getLabel())
+            ->sort()
+            ->all();
     }
 
     private static function definition(?string $owner)

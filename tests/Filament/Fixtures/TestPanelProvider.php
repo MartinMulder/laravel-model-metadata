@@ -6,6 +6,7 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use MartinMulder\LaravelModelMetadata\Filament\Resources\MetadataSchemas\MetadataSchemaResource;
 use MartinMulder\LaravelModelMetadata\Tests\Filament\Fixtures\Resources\Categories\CategoryResource;
+use MartinMulder\LaravelModelMetadata\Tests\Filament\Fixtures\Resources\Items\ItemResource;
 
 class TestPanelProvider extends PanelProvider
 {
@@ -18,6 +19,7 @@ class TestPanelProvider extends PanelProvider
             ->resources([
                 MetadataSchemaResource::class,
                 CategoryResource::class,
+                ItemResource::class,
             ]);
     }
 }

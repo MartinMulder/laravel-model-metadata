@@ -114,6 +114,7 @@ The built-in types are:
 - `json`
 - `badges`
 - `date`
+- `multiselect`
 
 They are always available — also when your app published an older config file that does not list
 a newer built-in type. Types in `config/laravel-model-metadata.php` are added to them (a type with
@@ -165,6 +166,20 @@ $product->setMetadata('tags', 'beschikbaarheid', 'badges');
 $product->setMetadata('tags', ['beschikbaarheid', 'populair'], 'badges');
 // => [['text' => 'beschikbaarheid'], ['text' => 'populair']]
 ```
+
+### The `multiselect` Type
+
+A list of chosen values — usually the keys of the field's options, e.g. slugs from an
+[option source](#10-option-sources-choices-from-another-package). Stored as a JSON array of strings;
+labels are looked up from the options when shown, so renaming a choice needs no data change:
+
+```php
+$document->setMetadata('onderwerpen', ['logging-monitoring', 'incidenten-datalekken'], 'multiselect');
+$document->getMetadata('onderwerpen');   // ['logging-monitoring', 'incidenten-datalekken']
+```
+
+Duplicates are dropped; a bare string becomes a single choice. With options, every value must be
+one of them. In Filament it is a searchable multi-select (with options) or a tags input (without).
 
 ### Creating a Custom Type
 To define a custom metadata type (e.g., to prepare for FilamentPHP custom layout selection in a later phase), follow these steps:
@@ -239,6 +254,33 @@ This relation manager supports managing model metadata directly through the Fila
 - **TextInput** with numeric validation for `integer` values.
 - **Textarea** with formatting and syntax validation for `json` values.
 - **TextInput** as a fallback for strings and custom registered types.
+
+### Metadata as form fields (`MetadataFields`)
+
+The relation manager is a generic key/value table. To edit the *defined* keys of a record (its
+`#[RequiresMetadata]` attributes and the schema rows of its scope) as ordinary fields on the edit
+page, add `MetadataFields` to the resource form:
+
+```php
+use Filament\Schemas\Components\Section;
+use MartinMulder\LaravelModelMetadata\Filament\Forms\MetadataFields;
+
+Section::make('Metadata')
+    ->components([MetadataFields::make()])            // or ::make(only: ['valid_from']), ::make(except: [...])
+    ->visibleOn('edit'),
+```
+
+| Type | Field |
+|---|---|
+| `string`, `integer`, `boolean` with options | Select |
+| `string` / `integer` / `boolean` | text input / integer input / toggle |
+| `date` | date picker |
+| `badges`, `multiselect` | multi-select with options, tags input without (badge colors are kept) |
+| `json` | textarea, must be valid JSON |
+
+The fields appear in schema order (`sort_order`), and only on an existing record, since the
+definitions depend on its scope. Values are saved with `setMetadata()` after the record itself;
+an empty field doesn't create a row. Keys without a definition stay in the relation manager.
 
 ### How to use:
 
@@ -401,6 +443,9 @@ $product->setMetadata('status', 'cancelled'); // throws InvalidArgumentException
 The [Filament relation manager](#5-integrating-with-filamentphp-v5) automatically swaps the
 free-text input for a key with declared `options` for a `Select` (scalar types) or a multi-select
 (`badges`) populated from those options — so users can only pick a valid value in the first place.
+Options can also come from a registered option source instead of a fixed list, see
+[section 10](#10-option-sources-choices-from-another-package).
+
 Note that a `badges` key with `options` loses the per-badge custom-color picker in the form (every
 selected tag falls back to the default badge color); the free-form Repeater with color picker is
 only shown for `badges` keys without declared `options`.
@@ -605,3 +650,45 @@ class MetadataVeldenRelationManager extends MetadataSchemasRelationManager
 ```
 
 In code, `$documentType->metadataSchemas()` reads and creates the same rows.
+
+---
+
+## 10. Option sources: choices from another package
+
+A fixed `options` list doesn't fit when the choices are records of another package — e.g.
+documents tagged with the topics of a standards package, while the documents package must not
+know that package. An **option source** decouples the two: the package that owns the choices
+registers them under a name, and a metadata field refers to that name.
+
+```php
+use MartinMulder\LaravelModelMetadata\Options\MetadataOptionSource;
+use MartinMulder\LaravelModelMetadata\Options\MetadataOptionSources;
+
+// In the service provider of the package that owns the choices:
+MetadataOptionSources::register(
+    MetadataOptionSource::make('normenkader-onderwerpen')
+        ->label('Onderwerpen (normenkaders)')
+        ->options(fn (): array => Onderwerp::orderBy('naam')->pluck('naam', 'slug')->all()), // [key => label]
+);
+```
+
+Then, in a schema row (Filament: *Options from source*), or in an attribute:
+
+```php
+MetadataSchema::create([
+    'owner_type' => Document::class, 'scope' => 'beleid',
+    'key' => 'onderwerpen', 'type' => 'multiselect',
+    'options_source' => 'normenkader-onderwerpen', 'required' => false,
+]);
+
+#[RequiresMetadata(key: 'onderwerpen', default: null, type: 'multiselect', required: false, optionsSource: 'normenkader-onderwerpen')]
+```
+
+- The stored values are the **keys** (stable, e.g. slugs); the labels are only for display. Values
+  are validated against the keys, compared as strings.
+- The closure runs on every lookup, so new records show up immediately.
+- A source that isn't registered (the package isn't installed) leaves the field unconstrained.
+- `RequiresMetadata::optionLabels()` gives the effective choices as `[value => label]` — from the
+  source or from the fixed list — and `allows($value)` checks one value. The relation manager's
+  `getOptionsForKey()` returns that same `[value => label]` map.
+

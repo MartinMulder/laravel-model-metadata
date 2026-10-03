@@ -12,6 +12,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use MartinMulder\LaravelModelMetadata\Filament\Resources\MetadataSchemas\Schemas\MetadataSchemaForm;
 use MartinMulder\LaravelModelMetadata\Models\MetadataSchema;
+use MartinMulder\LaravelModelMetadata\Options\MetadataOptionSources;
 use MartinMulder\LaravelModelMetadata\Scopes\MetadataScopeRegistry;
 
 class MetadataSchemasTable
@@ -55,8 +56,9 @@ class MetadataSchemasTable
 
                 TextColumn::make('options')
                     ->label('Options')
-                    ->state(fn ($record) => is_array($record->options) ? count($record->options) : 0)
-                    ->suffix(' option(s)'),
+                    ->state(fn ($record): string => filled($record->options_source)
+                        ? 'from ' . (MetadataOptionSources::get($record->options_source)?->getLabel() ?? $record->options_source)
+                        : (is_array($record->options) ? count($record->options) : 0) . ' option(s)'),
 
                 TextColumn::make('sort_order')
                     ->sortable()

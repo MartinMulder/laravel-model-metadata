@@ -295,7 +295,7 @@ if (class_exists(\Filament\Resources\RelationManagers\RelationManager::class)) {
         $manager = new TestRequiredMetadataRelationManager();
         $manager->ownerRecord = $model;
 
-        expect($manager->testGetOptionsForKey('status'))->toBe(['draft', 'published', 'archived']);
+        expect($manager->testGetOptionsForKey('status'))->toBe(['draft' => 'draft', 'published' => 'published', 'archived' => 'archived']);
         expect($manager->testGetOptionsForKey('unknown_key'))->toBeNull();
         expect($manager->testGetOptionsForKey(null))->toBeNull();
     });

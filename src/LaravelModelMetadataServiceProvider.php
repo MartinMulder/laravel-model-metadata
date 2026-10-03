@@ -3,6 +3,7 @@
 namespace MartinMulder\LaravelModelMetadata;
 
 use Illuminate\Support\ServiceProvider;
+use MartinMulder\LaravelModelMetadata\Options\MetadataOptionSourceRegistry;
 use MartinMulder\LaravelModelMetadata\Scopes\MetadataScopeRegistry;
 
 class LaravelModelMetadataServiceProvider extends ServiceProvider
@@ -39,6 +40,9 @@ class LaravelModelMetadataServiceProvider extends ServiceProvider
 
             return $registry;
         });
+
+        // Named option lists for metadata fields (MetadataOptionSources::register()).
+        $this->app->singleton(MetadataOptionSourceRegistry::class);
     }
 
     /**

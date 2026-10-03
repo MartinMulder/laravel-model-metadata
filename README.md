@@ -60,7 +60,7 @@ $product->getMetadata('short_description'); // 'High quality premium product'
 ```
 
 That's the basics — see **[USAGE.md](USAGE.md)** for the full guide, including:
-- All built-in value types (`string`, `integer`, `boolean`, `json`, `badges`, `date`) and how to
+- All built-in value types (`string`, `integer`, `boolean`, `json`, `badges`, `date`, `multiselect`) and how to
   register your own.
 - Declaring required metadata keys, defaults, and allowed options with `#[RequiresMetadata]`.
 - Scope-aware metadata schemas (`metadata_schemas` + `metadataScope()`) for models where
@@ -68,7 +68,11 @@ That's the basics — see **[USAGE.md](USAGE.md)** for the full guide, including
 - Registering scopes from a package (`MetadataScopes::register(MetadataScope::for(...)->scopedBy(...))`),
   so the admin UI offers owners and scope values as choices, plus a *Metadata fields* relation
   manager for the source model (e.g. the fields per document type).
-- The bundled `MetadataRelationManager` and `MetadataSchemaResource` for FilamentPHP v5.
+- Option sources (`MetadataOptionSources::register(...)`): choices offered by another package
+  (e.g. its records, by slug), so a metadata field can use them without the owner model knowing
+  that package.
+- The bundled `MetadataRelationManager`, `MetadataSchemaResource` and `MetadataFields` (the defined
+  keys as ordinary form fields) for FilamentPHP v5.
 
 ---
 

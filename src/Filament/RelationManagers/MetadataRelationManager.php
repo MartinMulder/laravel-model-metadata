@@ -65,10 +65,7 @@ class MetadataRelationManager extends RelationManager
                 // type-specific free-text/toggle fields below for string/integer/boolean types.
                 Forms\Components\Select::make('value_select')
                     ->label('Value')
-                    ->options(fn (Get $get) => array_combine(
-                        $this->getOptionsForKey($get('key')) ?? [],
-                        $this->getOptionsForKey($get('key')) ?? [],
-                    ))
+                    ->options(fn (Get $get) => $this->getOptionsForKey($get('key')) ?? [])
                     ->visible(fn (Get $get) => in_array($get('type'), ['string', 'integer', 'boolean'], true)
                         && $this->getOptionsForKey($get('key')) !== null)
                     ->afterStateHydrated(function ($component, $record) {
@@ -78,20 +75,32 @@ class MetadataRelationManager extends RelationManager
                         }
                     }),
 
-                // Value input when a badges key has declared options (multiple choice): replaces
-                // the free-form Repeater below, and does not support per-badge custom colors.
+                // Value input when a badges or multiselect key has declared options (multiple
+                // choice): replaces the free-form Repeater below, and does not support per-badge
+                // custom colors.
                 Forms\Components\Select::make('value_multiselect')
                     ->label('Value')
                     ->multiple()
-                    ->options(fn (Get $get) => array_combine(
-                        $this->getOptionsForKey($get('key')) ?? [],
-                        $this->getOptionsForKey($get('key')) ?? [],
-                    ))
-                    ->visible(fn (Get $get) => $get('type') === 'badges'
+                    ->searchable()
+                    ->options(fn (Get $get) => $this->getOptionsForKey($get('key')) ?? [])
+                    ->visible(fn (Get $get) => in_array($get('type'), ['badges', 'multiselect'], true)
                         && $this->getOptionsForKey($get('key')) !== null)
                     ->afterStateHydrated(function ($component, $record) {
                         if ($record && $record->type === 'badges' && $this->getOptionsForKey($record->key) !== null) {
                             $component->state(is_array($record->value) ? array_column($record->value, 'text') : []);
+                        }
+                        if ($record && $record->type === 'multiselect' && $this->getOptionsForKey($record->key) !== null) {
+                            $component->state($record->value ?? []);
+                        }
+                    }),
+
+                // Value input for a multiselect key without options: free values.
+                Forms\Components\TagsInput::make('value_list')
+                    ->label('Value')
+                    ->visible(fn (Get $get) => $get('type') === 'multiselect' && $this->getOptionsForKey($get('key')) === null)
+                    ->afterStateHydrated(function ($component, $record) {
+                        if ($record && $record->type === 'multiselect' && $this->getOptionsForKey($record->key) === null) {
+                            $component->state($record->value ?? []);
                         }
                     }),
 
@@ -198,10 +207,10 @@ class MetadataRelationManager extends RelationManager
                 // Default fallback for String and custom types
                 Forms\Components\TextInput::make('value_string')
                     ->label('Value')
-                    ->visible(fn (Get $get) => !in_array($get('type'), ['boolean', 'json', 'integer', 'badges', 'date'])
+                    ->visible(fn (Get $get) => !in_array($get('type'), ['boolean', 'json', 'integer', 'badges', 'date', 'multiselect'])
                         && $this->getOptionsForKey($get('key')) === null)
                     ->afterStateHydrated(function ($component, $record) {
-                        if ($record && !in_array($record->type, ['boolean', 'json', 'integer', 'badges', 'date'])
+                        if ($record && !in_array($record->type, ['boolean', 'json', 'integer', 'badges', 'date', 'multiselect'])
                             && $this->getOptionsForKey($record->key) === null) {
                             $component->state((string) $record->value);
                         }
@@ -228,6 +237,11 @@ class MetadataRelationManager extends RelationManager
                         if ($record->type === 'badges' && is_array($record->value)) {
                             return array_column($record->value, 'text');
                         }
+                        if ($record->type === 'multiselect') {
+                            $labels = $this->getOptionsForKey($record->key) ?? [];
+
+                            return array_map(fn (string $value) => $labels[$value] ?? $value, $record->value ?? []);
+                        }
                         if ($record->type === 'boolean') {
                             return $record->value ? 'true' : 'false';
                         }
@@ -240,7 +254,7 @@ class MetadataRelationManager extends RelationManager
                         }
                         return (string) $record->value;
                     })
-                    ->badge(fn (Model $record): bool => $record->type === 'badges')
+                    ->badge(fn (Model $record): bool => in_array($record->type, ['badges', 'multiselect'], true))
                     ->color(function (string | array $state, Model $record) {
                         if ($record->type === 'badges' && is_string($state) && is_array($record->value)) {
                             foreach ($record->value as $badge) {
@@ -316,9 +330,10 @@ class MetadataRelationManager extends RelationManager
     }
 
     /**
-     * Resolve the effective options for a key on the owning record, if any.
+     * Resolve the effective options for a key on the owning record, if any, as [value => label]:
+     * a fixed list (value and label alike) or a registered option source.
      *
-     * @return array<int, mixed>|null
+     * @return array<string|int, string>|null
      */
     protected function getOptionsForKey(?string $key): ?array
     {
@@ -326,11 +341,9 @@ class MetadataRelationManager extends RelationManager
             return null;
         }
 
-        $options = $this->getOwnerRecord()->resolvedMetadataDefinitions()[$key]->options ?? null;
-
-        // An empty list is never a meaningful constraint — treat it as "unconstrained" so the
-        // form falls back to a free-text input instead of an unusable, option-less Select.
-        return $options === [] ? null : $options;
+        // An empty list is never a meaningful constraint — optionLabels() returns null for it, so
+        // the form falls back to a free-text input instead of an unusable, option-less Select.
+        return ($this->getOwnerRecord()->resolvedMetadataDefinitions()[$key] ?? null)?->optionLabels();
     }
 
     /**
@@ -343,14 +356,21 @@ class MetadataRelationManager extends RelationManager
 
         if ($options !== null && in_array($type, ['string', 'integer', 'boolean'], true)) {
             $data['value'] = app(TypeRegistry::class)->get($type)->cast($data['value_select'] ?? null);
-            unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect'], $data['value_date']);
+            unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect'], $data['value_date'], $data['value_list']);
+
+            return $data;
+        }
+
+        if ($type === 'multiselect') {
+            $data['value'] = $options !== null ? ($data['value_multiselect'] ?? []) : ($data['value_list'] ?? []);
+            unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect'], $data['value_date'], $data['value_list']);
 
             return $data;
         }
 
         if ($options !== null && $type === 'badges') {
             $data['value'] = $data['value_multiselect'] ?? [];
-            unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect'], $data['value_date']);
+            unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect'], $data['value_date'], $data['value_list']);
 
             return $data;
         }
@@ -387,7 +407,7 @@ class MetadataRelationManager extends RelationManager
         }
 
         // Clean up temporary fields so they are not saved as database columns
-        unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect'], $data['value_date']);
+        unset($data['value_boolean'], $data['value_integer'], $data['value_badges'], $data['value_json'], $data['value_string'], $data['value_select'], $data['value_multiselect'], $data['value_date'], $data['value_list']);
 
         return $data;
     }

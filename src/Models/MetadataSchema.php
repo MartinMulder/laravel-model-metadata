@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use MartinMulder\LaravelModelMetadata\Attributes\RequiresMetadata;
 use MartinMulder\LaravelModelMetadata\TypeRegistry;
 
-#[Fillable(['owner_type', 'scope', 'key', 'type', 'default', 'options', 'required', 'sort_order'])]
+#[Fillable(['owner_type', 'scope', 'key', 'type', 'default', 'options', 'options_source', 'required', 'sort_order'])]
 class MetadataSchema extends Model
 {
     /**
@@ -49,6 +49,7 @@ class MetadataSchema extends Model
             type: $this->type,
             options: $this->options,
             required: $this->required,
+            optionsSource: $this->options_source,
         );
     }
 }

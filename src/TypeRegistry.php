@@ -19,6 +19,7 @@ class TypeRegistry
         'json' => Types\JsonType::class,
         'badges' => Types\BadgesType::class,
         'date' => Types\DateType::class,
+        'multiselect' => Types\MultiselectType::class,
     ];
 
     /**

@@ -5,6 +5,7 @@ namespace MartinMulder\LaravelModelMetadata\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use MartinMulder\LaravelModelMetadata\Attributes\RequiresMetadata;
 use MartinMulder\LaravelModelMetadata\TypeRegistry;
 
 #[Fillable(['key', 'value', 'type'])]
@@ -62,13 +63,13 @@ class Metadata extends Model
                     throw new \InvalidArgumentException("Invalid value for metadata type '{$type}'.");
                 }
 
-                $options = static::requiredOptionsFor($metadata);
+                $definition = static::definitionFor($metadata);
 
-                if ($options !== null) {
+                if ($definition !== null) {
                     foreach (static::extractComparableValues($metadata->rawPhpValue) as $value) {
-                        if (!in_array($value, $options, true)) {
+                        if (!$definition->allows($value)) {
                             throw new \InvalidArgumentException(
-                                "Invalid value for metadata key '{$metadata->key}': must be one of [" . implode(', ', $options) . '].'
+                                "Invalid value for metadata key '{$metadata->key}': must be one of [" . implode(', ', array_keys($definition->optionLabels() ?? [])) . '].'
                             );
                         }
                     }
@@ -88,12 +89,11 @@ class Metadata extends Model
     }
 
     /**
-     * Resolve the effective (attribute + scope-specific schema) options for this metadata
-     * row's key, if any, from its owning model instance.
-     *
-     * @return array<int, mixed>|null
+     * The effective (attribute + scope-specific schema) definition of this metadata row's key,
+     * from its owning model instance, if any. Its options (a fixed list or an option source)
+     * constrain the allowed values.
      */
-    protected static function requiredOptionsFor(self $metadata): ?array
+    protected static function definitionFor(self $metadata): ?RequiresMetadata
     {
         $owner = $metadata->model;
 
@@ -101,12 +101,7 @@ class Metadata extends Model
             return null;
         }
 
-        $options = $owner->resolvedMetadataDefinitions()[$metadata->key]->options ?? null;
-
-        // An empty list is never a meaningful constraint (every value would be rejected) — it's
-        // an input artifact (e.g. a TagsInput left empty saves `[]`, not `null`), so treat it the
-        // same as "unconstrained".
-        return $options === [] ? null : $options;
+        return $owner->resolvedMetadataDefinitions()[$metadata->key] ?? null;
     }
 
     /**

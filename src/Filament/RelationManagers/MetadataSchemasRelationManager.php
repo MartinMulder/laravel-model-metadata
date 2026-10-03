@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use MartinMulder\LaravelModelMetadata\Filament\Resources\MetadataSchemas\Schemas\MetadataSchemaForm;
 use MartinMulder\LaravelModelMetadata\Models\MetadataSchema;
+use MartinMulder\LaravelModelMetadata\Options\MetadataOptionSources;
 
 /**
  * Manages the metadata fields of one scope, on the resource of the scope's source model — e.g.
@@ -58,8 +59,9 @@ class MetadataSchemasRelationManager extends RelationManager
                     ->placeholder('—')
                     ->limit(40),
                 TextColumn::make('options')
-                    ->state(fn (MetadataSchema $record): int => is_array($record->options) ? count($record->options) : 0)
-                    ->suffix(' option(s)'),
+                    ->state(fn (MetadataSchema $record): string => filled($record->options_source)
+                        ? 'from ' . (MetadataOptionSources::get($record->options_source)?->getLabel() ?? $record->options_source)
+                        : (is_array($record->options) ? count($record->options) : 0) . ' option(s)'),
                 IconColumn::make('required')
                     ->boolean(),
             ])
